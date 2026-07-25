@@ -15,8 +15,10 @@ import {
   FiMapPin,
   FiMenu,
   FiMessageCircle,
+  FiMinus,
   FiMusic,
   FiPhone,
+  FiPlus,
   FiSearch,
   FiStar,
   FiUsers,
@@ -53,24 +55,31 @@ function MenuRow({ item, index }: { item: MenuItem; index: number }) {
 
   return (
     <motion.article
+      layout={!reduceMotion}
       className={`menu-row ${item.featured ? "is-featured" : ""}`}
       initial={reduceMotion ? false : { opacity: 0, y: 12 }}
       whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.35 }}
       transition={{ duration: 0.35, delay: Math.min(index * 0.035, 0.2) }}
     >
-      {item.featured && <span className="house-label">Favorito de la casa</span>}
+      {item.featured && (
+        <span className="house-label">
+          <FiStar aria-hidden="true" /> Favorito de la casa
+        </span>
+      )}
       <div className="menu-row-heading">
         <h3>{item.name}</h3>
         <span className="leader" aria-hidden="true" />
         <Price value={item.price} />
       </div>
-      {item.detail && <p>{item.detail}</p>}
+      {item.detail && <p className="menu-item-detail">{item.detail}</p>}
     </motion.article>
   );
 }
-
 function MenuPage({ section, index }: { section: MenuSection; index: number }) {
+  const isWings = section.id === "alitas-boneless";
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="category-page">
       <header className="category-heading">
@@ -84,11 +93,37 @@ function MenuPage({ section, index }: { section: MenuSection; index: number }) {
         </div>
       </header>
 
-      <div className={`menu-list ${section.id === "alitas-boneless" ? "size-list" : ""}`}>
-        {section.items.map((item, itemIndex) => (
-          <MenuRow item={item} index={itemIndex} key={item.name} />
-        ))}
-      </div>
+      {isWings ? (
+        <section className="wing-sizes" aria-labelledby="wing-size-title">
+          <div className="wing-block-heading">
+            <span className="eyebrow">Elige tu orden</span>
+            <h3 id="wing-size-title">Tama&ntilde;os</h3>
+          </div>
+          <div className="wing-size-grid">
+            {section.items.map((item, itemIndex) => (
+              <motion.article
+                key={item.name}
+                className={item.featured ? "featured" : ""}
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: itemIndex * 0.08 }}
+              >
+                {item.featured && <FiStar aria-hidden="true" className="wing-star" />}
+                <small>{item.detail}</small>
+                <h4>{item.name}</h4>
+                <Price value={item.price} />
+              </motion.article>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <div className="menu-list">
+          {section.items.map((item, itemIndex) => (
+            <MenuRow item={item} index={itemIndex} key={item.name} />
+          ))}
+        </div>
+      )}
 
       {section.flavors && (
         <section className="flavor-block" aria-labelledby="flavor-title">
@@ -98,7 +133,7 @@ function MenuPage({ section, index }: { section: MenuSection; index: number }) {
             {section.flavors.map((flavor, flavorIndex) => (
               <motion.span
                 key={flavor}
-                initial={{ opacity: 0, scale: 0.96 }}
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: Math.min(flavorIndex * 0.025, 0.25) }}
@@ -112,7 +147,6 @@ function MenuPage({ section, index }: { section: MenuSection; index: number }) {
     </div>
   );
 }
-
 export default function MenuExperience({ logo }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
@@ -157,6 +191,19 @@ export default function MenuExperience({ logo }: Props) {
     });
   }, [activeIndex, reduceMotion]);
 
+  useEffect(() => {
+    if (!swiper) return;
+
+    const activeSlide = swiper.slides[activeIndex];
+    if (!activeSlide) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      swiper.updateAutoHeight(reduceMotion ? 0 : 220);
+    });
+
+    resizeObserver.observe(activeSlide);
+    return () => resizeObserver.disconnect();
+  }, [swiper, activeIndex, reduceMotion]);
   useEffect(() => {
     if (!searchOpen && !categoryMenuOpen) return;
 
@@ -337,7 +384,10 @@ export default function MenuExperience({ logo }: Props) {
             <Image src={logo} alt="" sizes="44px" />
             <div>
               <span className="eyebrow">Men&uacute; completo</span>
-              <p>{menuSections[activeIndex].shortTitle}</p>
+              <p>
+                {menuSections[activeIndex].shortTitle}
+                <span>{String(activeIndex + 1).padStart(2, "0")} / {String(menuSections.length).padStart(2, "0")}</span>
+              </p>
             </div>
           </div>
           <div className="menu-toolbar-actions">
@@ -377,6 +427,12 @@ export default function MenuExperience({ logo }: Props) {
                 {section.shortTitle}
               </button>
             ))}
+          </div>
+          <div className="category-progress" aria-hidden="true">
+            <motion.span
+              animate={{ scaleX: (activeIndex + 1) / menuSections.length }}
+              transition={{ duration: reduceMotion ? 0 : 0.35, ease: "easeOut" }}
+            />
           </div>
         </nav>
 
